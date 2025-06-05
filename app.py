@@ -1,21 +1,22 @@
-# save this as app.py
-
 import pandas as pd
 import streamlit as st
 from io import BytesIO
 
-# Country code mapping (add more as needed)
-country_codes = {
-    "Albania": "AL",
-    "Germany": "DE",
-    "France": "FR",
-}
+# === Load Country Codes from Excel ===
+def load_country_codes():
+    country_df = pd.read_excel("Book2.xlsx")  # Your uploaded file
+    country_df.columns = country_df.columns.str.strip().str.lower()
+    code_map = dict(zip(country_df.iloc[:, 0].str.strip(), country_df.iloc[:, 1].str.strip()))
+    return code_map
 
+country_codes = load_country_codes()
+
+# === Naming Convention Logic ===
 def generate_names(row):
     parts = ["NN"]
 
-    country = row.get("Country", "").strip()
-    parts.append(country_codes.get(country, country))
+    country = str(row.get("Country", "")).strip()
+    parts.append(country_codes.get(country, country))  # Lookup or fallback
 
     jurisdiction_map = {"Yes": "Domestic", "No": "Foreign", "Both": "Global"}
     ae_value = str(row.get("AE in Jurisdiction", "")).strip()
@@ -61,12 +62,14 @@ def generate_names(row):
 
     return names
 
+# === Process Uploaded Excel File ===
 def process_file(uploaded_file):
     df = pd.read_excel(uploaded_file)
     df["Generated Names"] = df.apply(generate_names, axis=1)
     exploded = df.explode("Generated Names")
     return exploded
 
+# === Convert DataFrame to Excel for Download ===
 def convert_df(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -74,10 +77,10 @@ def convert_df(df):
     output.seek(0)
     return output
 
-# --- Streamlit UI ---
+# === Streamlit Interface ===
 st.title("Excel Naming Convention Generator")
 
-uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload your Excel data file", type=["xlsx"])
 
 if uploaded_file:
     st.success("File uploaded. Processing...")
