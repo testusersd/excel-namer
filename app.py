@@ -38,7 +38,6 @@ def generate_names(row):
 
     names = []
 
-    # === Rule 1: If Fatal is Yes ===
     if fatal_val == "Yes":
         name = parts.copy()
         name.append("Fatal")
@@ -46,7 +45,6 @@ def generate_names(row):
             name.append(expected_term)
         names.append(" - ".join(name))
 
-    # === Rule 2: If Life Threatening is Yes ===
     if life_threatening_val == "Yes":
         name = parts.copy()
         name.append("Life threatening")
@@ -54,15 +52,14 @@ def generate_names(row):
             name.append(expected_term)
         names.append(" - ".join(name))
 
-    # === Rule 3: If both Fatal and Life Threatening are blank ===
-    if not fatal_val and not life_threatening_val:
+    # If neither fatal nor life-threatening is Yes, use Serious/Non-Serious
+    if fatal_val != "Yes" and life_threatening_val != "Yes":
         name = parts.copy()
 
-        # Include Serious or Non-Serious explicitly
         if serious_val == "Yes":
             name.append("Serious")
         else:
-            name.append("Non-Serious")
+            name.append("Non-Serious")  # default fallback if Serious is No or blank
 
         if expected_term:
             name.append(expected_term)
