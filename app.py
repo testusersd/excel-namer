@@ -11,7 +11,7 @@ def load_country_codes():
 
 country_codes = load_country_codes()
 
-# === Naming Convention Logic with all new rules ===
+# === Naming Convention Logic with all business rules ===
 def generate_names(row):
     fatal_val = str(row.get("Fatal") or "").strip()
     life_threatening_val = str(row.get("Life Threatening") or "").strip()
@@ -30,12 +30,6 @@ def generate_names(row):
     if report_type in ["Spontaneous", "Solicited", "Clinical trial"]:
         parts.append(report_type)
 
-    # Add Serious or Non-Serious based on value
-    if serious_val == "Yes":
-        parts.append("Serious")
-    elif serious_val == "No":
-        parts.append("Non-Serious")
-
     expected = str(row.get("Expected (Listedness)", "")).strip()
     expected_term = {
         "Yes - Listed": "Expected",
@@ -44,6 +38,7 @@ def generate_names(row):
 
     names = []
 
+    # === Rule 1: If Fatal is Yes ===
     if fatal_val == "Yes":
         name = parts.copy()
         name.append("Fatal")
@@ -51,6 +46,7 @@ def generate_names(row):
             name.append(expected_term)
         names.append(" - ".join(name))
 
+    # === Rule 2: If Life Threatening is Yes ===
     if life_threatening_val == "Yes":
         name = parts.copy()
         name.append("Life threatening")
@@ -58,11 +54,19 @@ def generate_names(row):
             name.append(expected_term)
         names.append(" - ".join(name))
 
-    # If both Fatal and Life Threatening are blank, fall back to Serious or Non-Serious
+    # === Rule 3: If both Fatal and Life Threatening are blank ===
     if not fatal_val and not life_threatening_val:
         name = parts.copy()
+
+        # Include Serious or Non-Serious explicitly
+        if serious_val == "Yes":
+            name.append("Serious")
+        else:
+            name.append("Non-Serious")
+
         if expected_term:
             name.append(expected_term)
+
         names.append(" - ".join(name))
 
     return names
