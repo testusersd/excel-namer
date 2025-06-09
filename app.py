@@ -11,60 +11,94 @@ def load_country_codes():
 
 country_codes = load_country_codes()
 
-# === Naming Convention Logic with all business rules ===
+# === Naming Convention Logic with updated SUSAR and CT logic ===
 def generate_names(row):
     fatal_val = str(row.get("Fatal") or "").strip()
     life_threatening_val = str(row.get("Life Threatening") or "").strip()
     serious_val = str(row.get("Serious") or "").strip()
+    causality_val = str(row.get("Causality") or "").strip()
+    report_type = str(row.get("Report Type", "")).strip().capitalize()
+    expected = str(row.get("Expected (Listedness)", "")).strip()
 
     parts = ["NN"]
 
+    # Country
     country = str(row.get("Country", "")).strip()
-    parts.append(country_codes.get(country, country))  # Lookup or fallback
+    parts.append(country_codes.get(country, country))
 
+    # Jurisdiction
     jurisdiction_map = {"Yes": "Domestic", "No": "Foreign", "Both": "Global"}
     ae_value = str(row.get("AE in Jurisdiction", "")).strip()
     parts.append(jurisdiction_map.get(ae_value, ""))
 
-    report_type = str(row.get("Report Type", "")).strip().capitalize()
-    if report_type in ["Spontaneous", "Solicited", "Clinical trial"]:
+    # Report Type
+    if report_type == "Clinical trial":
+        parts.append("CT")
+    elif report_type in ["Spontaneous", "Solicited"]:
         parts.append(report_type)
 
-    expected = str(row.get("Expected (Listedness)", "")).strip()
+    # Expected
     expected_term = {
         "Yes - Listed": "Expected",
         "No - Unlisted": "Unexpected"
     }.get(expected, None)
 
+    # SUSAR conditions
+    is_susar = (
+        report_type == "Clinical trial"
+        and serious_val == "Yes"
+        and expected == "No - Unlisted"
+        and causality_val == "Related"
+    )
+
     names = []
 
-    if fatal_val == "Yes":
-        name = parts.copy()
-        name.append("Fatal")
-        if expected_term:
-            name.append(expected_term)
-        names.append(" - ".join(name))
+    if is_susar:
+        if fatal_val == "Yes":
+            name = parts.copy()
+            name.append("SUSAR (Death)")
+            if expected_term:
+                name.append(expected_term)
+            names.append(" - ".join(name))
 
-    if life_threatening_val == "Yes":
-        name = parts.copy()
-        name.append("Life threatening")
-        if expected_term:
-            name.append(expected_term)
-        names.append(" - ".join(name))
+        if life_threatening_val == "Yes":
+            name = parts.copy()
+            name.append("SUSAR (LT)")
+            if expected_term:
+                name.append(expected_term)
+            names.append(" - ".join(name))
 
-    # If neither fatal nor life-threatening is Yes, use Serious/Non-Serious
-    if fatal_val != "Yes" and life_threatening_val != "Yes":
-        name = parts.copy()
+        if fatal_val != "Yes" and life_threatening_val != "Yes":
+            name = parts.copy()
+            name.append("SUSAR")
+            if expected_term:
+                name.append(expected_term)
+            names.append(" - ".join(name))
+    else:
+        # Regular naming logic
+        if fatal_val == "Yes":
+            name = parts.copy()
+            name.append("Fatal")
+            if expected_term:
+                name.append(expected_term)
+            names.append(" - ".join(name))
 
-        if serious_val == "Yes":
-            name.append("Serious")
-        else:
-            name.append("Non-Serious")  # default fallback if Serious is No or blank
+        if life_threatening_val == "Yes":
+            name = parts.copy()
+            name.append("Life threatening")
+            if expected_term:
+                name.append(expected_term)
+            names.append(" - ".join(name))
 
-        if expected_term:
-            name.append(expected_term)
-
-        names.append(" - ".join(name))
+        if fatal_val != "Yes" and life_threatening_val != "Yes":
+            name = parts.copy()
+            if serious_val == "Yes":
+                name.append("Serious")
+            else:
+                name.append("Non-Serious")
+            if expected_term:
+                name.append(expected_term)
+            names.append(" - ".join(name))
 
     return names
 
@@ -101,4 +135,6 @@ if uploaded_file:
         data=output_excel,
         file_name="naming_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+
     )
