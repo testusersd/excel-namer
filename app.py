@@ -136,5 +136,3 @@ if uploaded_file:
         file_name="naming_results.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-
-    )
